@@ -13,16 +13,17 @@ def jacobi(A, b, x0, tol, max_iterations, decimal_places):
             for j in range(n):
                 if i != j:
                     sum += A[i, j] * x[j]
-            print(f'Somatório na equação {i+1} (iteração {k+1}): {sum}')  # Exibe o somatório parcial para cada equação
             x_new[i] = (b[i] - sum) / A[i, i]
-        
-        x_new = np.round(x_new, decimal_places)  # Arredondar os resultados
-        print(f'Iteração {k + 1}: {x_new}\n')  # Exibindo a iteração
-        
+            # Printar as somatórias
+            print(f'Somatório da equação {i+1} na iteração {k+1}: {sum}')
+
+        print(f'Iteração {k + 1}: {x_new}')  # Exibindo a iteração
+
         if np.linalg.norm(x_new - x, ord=np.inf) < tol:
-            return x_new, k + 1
+            # Arredondar o resultado final
+            return np.round(x_new, decimal_places), k + 1
         x = x_new
-    
+
     raise Exception(f'Não convergiu após {max_iterations} iterações')
 
 def gauss_seidel(A, b, x0, tol, max_iterations, decimal_places):
@@ -33,57 +34,36 @@ def gauss_seidel(A, b, x0, tol, max_iterations, decimal_places):
         for i in range(n):
             sum1 = np.dot(A[i, :i], x_new[:i])
             sum2 = np.dot(A[i, i + 1:], x[i + 1:])
-            sum_total = sum1 + sum2
-            print(f'Somatório na equação {i+1} (iteração {k+1}): {sum_total}')  # Exibe o somatório parcial para cada equação
-            x_new[i] = (b[i] - sum_total) / A[i, i]
-        
-        x_new = np.round(x_new, decimal_places)  # Arredondar os resultados
-        print(f'Iteração {k + 1}: {x_new}\n')  # Exibindo a iteração
-        
+            x_new[i] = (b[i] - sum1 - sum2) / A[i, i]
+            # Printar as somatórias
+            print(f'Somatório antes do i {i+1} na iteração {k+1}: sum1 = {sum1}, sum2 = {sum2}')
+
+        print(f'Iteração {k + 1}: {x_new}')  # Exibindo a iteração
+
         if np.linalg.norm(x_new - x, ord=np.inf) < tol:
-            return x_new, k + 1
+            # Arredondar o resultado final
+            return np.round(x_new, decimal_places), k + 1
         x = x_new
-    
+
     raise Exception(f'Não convergiu após {max_iterations} iterações')
 
 def eliminacao_gauss(A, b, decimal_places):
     n = len(b)
     Ab = np.hstack([A, b.reshape(-1, 1)])
-    
+
     for i in range(n):
         for j in range(i+1, n):
             factor = Ab[j, i] / Ab[i, i]
             Ab[j] = Ab[j] - factor * Ab[i]
-    
+
     x = np.zeros_like(b)
     for i in range(n-1, -1, -1):
         x[i] = (Ab[i, -1] - np.dot(Ab[i, i+1:n], x[i+1:])) / Ab[i, i]
-    
-    return np.round(x, decimal_places)  # Arredondar os resultados
 
-def is_diagonally_dominant(A):
-    for i in range(len(A)):
-        row_sum = sum(abs(A[i, j]) for j in range(len(A)) if j != i)
-        if abs(A[i, i]) < row_sum:
-            return False
-    return True
-
-def tornar_diagonalmente_dominante(A, b):
-    n = len(A)
-    for i in range(n):
-        for j in range(i, n):
-            if abs(A[j, i]) >= sum(abs(A[j, k]) for k in range(n) if k != i):
-                A[[i, j]] = A[[j, i]]
-                b[[i, j]] = b[[j, i]]
-                break
-
-    for i in range(n):
-        if abs(A[i, i]) < sum(abs(A[i, j]) for j in range(n) if j != i):
-            return A, b, False
-    return A, b, True
+    # Arredondar o resultado final
+    return np.round(x, decimal_places)
 
 # Função de Interpolação por Lagrange
-
 def lagrange_interpolation(x_values, y_values, x_to_evaluate, decimal_places):
     x = symbols('x')
     n = len(x_values)
@@ -91,9 +71,12 @@ def lagrange_interpolation(x_values, y_values, x_to_evaluate, decimal_places):
 
     for i in range(n):
         term = y_values[i]
+        print(f"\nCalculando o termo {i + 1}:")
         for j in range(n):
             if i != j:
+                print(f"Multiplicando por (x - {x_values[j]}) / ({x_values[i]} - {x_values[j]})")
                 term *= (x - x_values[j]) / (x_values[i] - x_values[j])
+        print(f"Termo {i + 1} antes de simplificação: {term}")
         polynomial += term
 
     polynomial_simplified = simplify(polynomial)
@@ -105,7 +88,6 @@ def lagrange_interpolation(x_values, y_values, x_to_evaluate, decimal_places):
     return result, polynomial_simplified
 
 # Obter os inputs do usuário para interpolação
-
 def obter_inputs_interpolacao():
     n = int(input("Digite o número de pontos para interpolação: "))
 
@@ -123,7 +105,6 @@ def obter_inputs_interpolacao():
     return x_values, y_values, x_to_evaluate, decimal_places
 
 # Obter os inputs do usuário para sistemas lineares
-
 def obter_inputs_usuario():
     n = int(input("Digite o número de equações (e variáveis): "))
 
@@ -141,12 +122,25 @@ def obter_inputs_usuario():
 
     tol = float(input("Digite o valor da tolerância: "))
     max_iterations = int(input("Digite o número máximo de iterações: "))
-    decimal_places = int(input("Digite o número de casas decimais para os resultados: "))
+    decimal_places = int(input("Digite o número de casas decimais para o resultado: "))
 
     return A, b, x0, tol, max_iterations, decimal_places
 
-# Resolver sistema linear
+# Função para verificar e tornar a matriz diagonalmente dominante
+def tornar_diagonalmente_dominante(A, b):
+    n = len(A)
+    sucesso = False
+    for i in range(n):
+        soma = sum(abs(A[i][j]) for j in range(n) if j != i)
+        if abs(A[i][i]) >= soma:
+            sucesso = True
+        else:
+            sucesso = False
+            break
 
+    return A, b, sucesso
+
+# Resolver sistema linear
 def resolver_sistema_linear(opcao, A, b, x0, tol, max_iterations, decimal_places):
     if opcao == 1:
         return jacobi(A, b, x0, tol, max_iterations, decimal_places)
@@ -156,7 +150,6 @@ def resolver_sistema_linear(opcao, A, b, x0, tol, max_iterations, decimal_places
         raise ValueError("Opção inválida. Escolha 1 para 'jacobi' ou 2 para 'gauss-seidel'.")
 
 # Programa principal
-
 def main():
     while True:
         print("Escolha o tipo de cálculo que deseja realizar:")
@@ -192,10 +185,15 @@ def main():
         elif escolha == 2:
             x_values, y_values, x_to_evaluate, decimal_places = obter_inputs_interpolacao()
             result, polynomial = lagrange_interpolation(x_values, y_values, x_to_evaluate, decimal_places)
-            print(f'Polinômio de Lagrange: {polynomial}')
+            print(f'\nPolinômio de Lagrange: {polynomial}')
             print(f'Valor interpolado para x = {x_to_evaluate}: f(x) = {result}')
+
         else:
-            print("Opção inválida. Encerrando o programa.")
+            print("Opção inválida. O programa será encerrado.")
+
+        continuar = input("Deseja realizar outro cálculo? (s/n): ").lower()
+        if continuar != 's':
+            print("Encerrando o programa.")
             break
 
 if __name__ == "__main__":
